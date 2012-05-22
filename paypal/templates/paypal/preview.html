@@ -30,6 +30,7 @@ Order preview | {{ block.super }}
 <h3>Please review the information above, then click "Place Order"</h3>
 <form method="post" action="{% url paypal-place-order %}">
 	{% csrf_token %}
+        <input type="hidden" name="action" value="place_order" />
 	<input type="hidden" name="payer_id" value="{{ payer_id }}" />
 	<input type="hidden" name="token" value="{{ token }}" />
     <div class="form-actions">
