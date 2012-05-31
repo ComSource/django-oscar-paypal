@@ -246,6 +246,9 @@ def set_txn(basket, shipping_methods, currency, return_url, cancel_url, update_u
     # here - think it's a problem with the API.
     params['PAYMENTREQUEST_0_MAXAMT'] = amount + max_charge
     params['MAXAMT'] = amount + max_charge
+    params['L_SHIPPINGOPTIONNAME0'] = shipping_method.name
+    params['L_SHIPPINGOPTIONAMOUNT0'] = charge
+    params['L_SHIPPINGOPTIONISDEFAULT0'] = 'true'
 
     # Handling set to zero for now - I've never worked on a site that needed a
     # handling charge.
