@@ -19,7 +19,7 @@ def _get_payment_action():
 
 
 def get_paypal_url(basket, shipping_methods, user=None, shipping_address=None,
-                   shipping_method=None, host=None, scheme='https'):
+                   shipping_method=None, host=None, scheme='http'):
     """
     Return the URL for PayPal Express transaction.
 
