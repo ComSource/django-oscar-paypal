@@ -18,7 +18,7 @@ from oscar.core.loading import get_class
 from oscar.apps.shipping.methods import FixedPrice
 
 from paypal.express.facade import get_paypal_url, fetch_transaction_details, confirm_transaction
-from paypal.express import PayPalError
+from paypal.exceptions import PayPalError
 
 ShippingAddress = get_model('order', 'ShippingAddress')
 Country = get_model('address', 'Country')
@@ -28,7 +28,7 @@ Repository = get_class('shipping.repository', 'Repository')
 
 class RedirectView(CheckoutSessionMixin, RedirectView):
     """
-    Initiate the transaction with Paypal and redirect the user 
+    Initiate the transaction with Paypal and redirect the user
     to PayPal's Express Checkout to perform the transaction.
     """
     permanent = False
@@ -73,7 +73,7 @@ class RedirectView(CheckoutSessionMixin, RedirectView):
             params['shipping_methods'] = shipping_methods
 
         if settings.DEBUG:
-            # Determine the localserver's hostname to use when 
+            # Determine the localserver's hostname to use when
             # in testing mode
             params['host'] = self.request.META['HTTP_HOST']
             params['scheme'] = 'http'
@@ -85,18 +85,21 @@ class RedirectView(CheckoutSessionMixin, RedirectView):
 
 
 class CancelResponseView(RedirectView):
+    permanent = False
+
     def get_redirect_url(self, **kwargs):
         messages.error(self.request, "PayPal transaction cancelled")
         return reverse('basket:summary')
 
 
 class SuccessResponseView(PaymentDetailsView):
-    template_name_preview = 'paypal/preview.html'
+    template_name_preview = 'paypal/express/preview.html'
+    preview = True
 
     def get(self, request, *args, **kwargs):
         """
-        Fetch details about the successful transaction from 
-        PayPal.  We use these details to show a preview of 
+        Fetch details about the successful transaction from
+        PayPal.  We use these details to show a preview of
         the order with a 'submit' button to place it.
         """
         try:
@@ -118,7 +121,7 @@ class SuccessResponseView(PaymentDetailsView):
         """
         Place an order.
 
-        We fetch the txn details again and then proceed with oscar's standard 
+        We fetch the txn details again and then proceed with oscar's standard
         payment details view for placing the order.
         """
         try:
@@ -136,9 +139,9 @@ class SuccessResponseView(PaymentDetailsView):
             return HttpResponseRedirect(reverse('basket:summary'))
 
         # Pass the user email so it can be stored with the order
-        kwargs['guest_email'] = self.txn.value('EMAIL')
+        order_kwargs = {'guest_email': self.txn.value('EMAIL')}
 
-        return super(SuccessResponseView, self).post(request, *args, **kwargs)
+        return self.submit(request.basket, order_kwargs=order_kwargs)
 
     def fetch_paypal_data(self, payer_id, token):
         self.payer_id = payer_id
@@ -199,6 +202,8 @@ class SuccessResponseView(PaymentDetailsView):
                                       currency=self.txn.currency)
         except PayPalError:
             raise UnableToTakePayment()
+        if not txn.is_successful:
+            raise UnableToTakePayment()
 
         # Record payment source
         source_type, is_created = SourceType.objects.get_or_create(name='PayPal')
@@ -208,7 +213,7 @@ class SuccessResponseView(PaymentDetailsView):
                         amount_debited=txn.amount)
         self.add_payment_source(source)
 
-    def create_shipping_address(self):
+    def create_shipping_address(self, basket=None):
         """
         Return a created shipping address instance, created using
         the data returned by PayPal.

@@ -90,7 +90,7 @@ TEMPLATE_CONTEXT_PROCESSORS = (
     'oscar.apps.promotions.context_processors.promotions',
     'oscar.apps.checkout.context_processors.checkout',
     'oscar.core.context_processors.metadata',
-) 
+)
 
 MIDDLEWARE_CLASSES = (
     'django.middleware.common.CommonMiddleware',
@@ -108,11 +108,10 @@ INTERNAL_IPS = ('127.0.0.1',)
 
 ROOT_URLCONF = 'urls'
 
-from oscar import OSCAR_PARENT_TEMPLATE_DIR
+from oscar import OSCAR_MAIN_TEMPLATE_DIR
 TEMPLATE_DIRS = (
     location('templates'),
-    os.path.join(OSCAR_PARENT_TEMPLATE_DIR, 'templates'),
-    OSCAR_PARENT_TEMPLATE_DIR,
+    OSCAR_MAIN_TEMPLATE_DIR,
 )
 
 # A sample logging configuration. The only tangible logging
@@ -198,9 +197,7 @@ INSTALLED_APPS = (
     # Apps from oscar
     'oscar',
     'oscar.apps.analytics',
-    'oscar.apps.discount',
     'oscar.apps.order',
-    'oscar.apps.checkout',
     'oscar.apps.catalogue',
     'oscar.apps.catalogue.reviews',
     'oscar.apps.basket',
@@ -216,11 +213,16 @@ INSTALLED_APPS = (
     'oscar.apps.dashboard.reports',
     'oscar.apps.dashboard.users',
     'oscar.apps.dashboard.orders',
+    'oscar.apps.dashboard.offers',
+    'oscar.apps.dashboard.ranges',
+    'oscar.apps.dashboard.vouchers',
     'oscar.apps.dashboard.promotions',
     'oscar.apps.dashboard.catalogue',
+    'oscar.apps.dashboard.communications',
     'sorl.thumbnail',
     'paypal',
     'apps.shipping',
+    'apps.checkout',
 )
 
 AUTHENTICATION_BACKENDS = (
@@ -240,15 +242,34 @@ from oscar.defaults import *
 OSCAR_ALLOW_ANON_CHECKOUT = True
 
 # Haystack settings
-HAYSTACK_SITECONF = 'oscar.search_sites'
-HAYSTACK_SEARCH_ENGINE = 'dummy'
+HAYSTACK_CONNECTIONS = {
+    'default': {
+        'ENGINE': 'haystack.backends.simple_backend.SimpleEngine',
+    },
+}
 
+# ===============
 # Paypal settings
-from integration import *
+# ===============
 
 # Taken from PayPal's documentation - these should always work in the sandbox
 PAYPAL_SANDBOX_MODE = True
 PAYPAL_API_VERSION = '88.0'
+
+# These are the standard PayPal sandbox details from the docs - but I don't
+# think you can get access to the merchant dashboard.  Specify your own in
+# integration.py to override these
 PAYPAL_API_USERNAME = 'sdk-three_api1.sdk.com'
 PAYPAL_API_PASSWORD = 'QFZCWN5HZM8VBG7Q'
 PAYPAL_API_SIGNATURE = 'A-IzJhZZjhg29XQ2qnhapuwxIDzyAZQ92FRP5dqBzVesOkzbdUONzmOU'
+
+# See http://stackoverflow.com/questions/9164332/how-do-i-get-an-application-id-for-the-paypal-sandbox
+PAYPAL_API_APPLICATION_ID = 'APP-80W284485P519543T'
+
+PAYPAL_CURRENCY = 'GBP'
+
+# Private settings (eg my PayPal sandbox details)
+try:
+    from integration import *
+except ImportError:
+    pass

@@ -1,6 +1,5 @@
 #!/usr/bin/env python
 import sys
-import os
 from coverage import coverage
 from optparse import OptionParser
 
@@ -11,7 +10,11 @@ if not settings.configured:
         'PAYPAL_EXPRESS_URL': 'https://www.sandbox.paypal.com/webscr',
         'PAYPAL_SANDBOX_MODE': True,
         'PAYPAL_VERSION': '88.0',
+        'PAYPAL_PAYFLOW_TEST_MODE': True,
+        'PAYPAL_API_APPLICATION_ID': '',
     }
+    # To specify integration settings (which include passwords, hence why they
+    # are not committed), create an integration.py module.
     try:
         from integration import *
     except ImportError:
@@ -19,6 +22,8 @@ if not settings.configured:
             'PAYPAL_API_USERNAME': '',
             'PAYPAL_API_PASSWORD': '',
             'PAYPAL_API_SIGNATURE': '',
+            'PAYPAL_PAYFLOW_VENDOR_ID': '',
+            'PAYPAL_PAYFLOW_PASSWORD': '',
         })
     else:
         for key, value in locals().items():
@@ -30,6 +35,8 @@ if not settings.configured:
         if key.startswith('OSCAR'):
             extra_settings[key] = value
     extra_settings['OSCAR_ALLOW_ANON_CHECKOUT'] = True
+
+    from oscar import get_core_apps, OSCAR_MAIN_TEMPLATE_DIR
 
     settings.configure(
             DATABASES={
@@ -44,28 +51,9 @@ if not settings.configured:
                 'django.contrib.sessions',
                 'django.contrib.sites',
                 'django.contrib.flatpages',
-                'oscar',
-                'oscar.apps.checkout',
-                'oscar.apps.partner',
-                'oscar.apps.customer',
-                'oscar.apps.shipping',
-                'oscar.apps.offer',
-                'oscar.apps.catalogue',
-                'oscar.apps.payment',
-                'oscar.apps.promotions',
-                'oscar.apps.voucher',
-                'oscar.apps.basket',
-                'oscar.apps.order',
-                'oscar.apps.address',
-                'oscar.apps.analytics',
-                'oscar.apps.dashboard.reports',
-                'oscar.apps.dashboard.catalogue',
-                'oscar.apps.dashboard.orders',
-                'oscar.apps.dashboard.orders',
-                'oscar.apps.dashboard.promotions',
                 'paypal',
                 'south',
-                ],
+                ] + get_core_apps(),
             MIDDLEWARE_CLASSES=(
                 'django.middleware.common.CommonMiddleware',
                 'django.contrib.sessions.middleware.SessionMiddleware',
@@ -77,15 +65,18 @@ if not settings.configured:
             ),
             DEBUG=False,
             SOUTH_TESTS_MIGRATE=False,
-            HAYSTACK_SITECONF='oscar.search_sites',
-            HAYSTACK_SEARCH_ENGINE='dummy',
+            HAYSTACK_CONNECTIONS={
+                'default': {
+                    'ENGINE': 'haystack.backends.simple_backend.SimpleEngine',
+                },
+            },
+            TEMPLATE_DIRS=(OSCAR_MAIN_TEMPLATE_DIR,),
             SITE_ID=1,
             ROOT_URLCONF='tests.urls',
-            NOSE_ARGS=['-s'],
+            NOSE_ARGS=['-s', '--with-spec'],
             **extra_settings
         )
 
-#from django.test.simple import DjangoTestSuiteRunner
 from django_nose import NoseTestSuiteRunner
 
 
@@ -109,6 +100,7 @@ def run_tests(*test_args):
         sys.exit(num_failures)
     print "Generating HTML coverage report"
     c.html_report()
+
 
 def generate_migration():
     from south.management.commands.schemamigration import Command

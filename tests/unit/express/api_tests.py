@@ -4,8 +4,9 @@ from mock import patch, Mock
 
 from oscar.apps.shipping.methods import Free
 
-from paypal import express
-from paypal.models import ExpressTransaction as Transaction
+from paypal.express import gateway
+from paypal import exceptions
+from paypal.express.models import ExpressTransaction as Transaction
 
 
 class MockedResponseTestCase(TestCase):
@@ -18,6 +19,7 @@ class MockedResponseTestCase(TestCase):
         basket = Mock()
         basket.total_incl_tax = D('10.00')
         basket.all_lines = Mock(return_value=[])
+        basket.get_discounts = Mock(return_value=[])
         return basket
 
     def tearDown(self):
@@ -38,8 +40,8 @@ class ErrorResponseTests(MockedResponseTestCase):
 
         with patch('requests.post') as post:
             post.return_value = response
-            with self.assertRaises(express.PayPalError):
-                express.set_txn(self.basket, self.methods, 'GBP', 'http://localhost:8000/success',
+            with self.assertRaises(exceptions.PayPalError):
+                gateway.set_txn(self.basket, self.methods, 'GBP', 'http://localhost:8000/success',
                                 'http://localhost:8000/error')
 
     def test_non_200_response_raises_exception(self):
@@ -47,8 +49,8 @@ class ErrorResponseTests(MockedResponseTestCase):
 
         with patch('requests.post') as post:
             post.return_value = response
-            with self.assertRaises(express.PayPalError):
-                express.set_txn(self.basket, self.methods, 'GBP', 'http://localhost:8000/success',
+            with self.assertRaises(exceptions.PayPalError):
+                gateway.set_txn(self.basket, self.methods, 'GBP', 'http://localhost:8000/success',
                                 'http://localhost:8000/error')
 
 
@@ -61,7 +63,7 @@ class SuccessResponseTests(MockedResponseTestCase):
 
         with patch('requests.post') as post:
             post.return_value = response
-            self.url = express.set_txn(self.basket, self.methods, 'GBP', 
+            self.url = gateway.set_txn(self.basket, self.methods, 'GBP',
                                        'http://localhost:8000/success',
                                        'http://localhost:8000/error')
 
